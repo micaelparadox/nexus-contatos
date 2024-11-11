@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus Contact Hub</title>
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+    <link href="styles.css" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container animate__animated animate__fadeIn">
+        <div class="sidebar">
+            <h1>Nexus Contact Hub</h1>
+            <form id="contact-form">
+                <div class="input-group">
+                    <label for="name">Nome</label>
+                    <input type="text" id="name" required />
+                </div>
+                <div class="input-group">
+                    <label for="phone_number">Número de Telefone</label>
+                    <input type="tel" id="phone_number" required />
+                </div>
+                <div class="input-group">
+                    <label for="social_media">Rede Social</label>
+                    <input type="text" id="social_media" />
+                </div>
+                <div class="input-group">
+                    <label for="city">Cidade</label>
+                    <input type="text" id="city" />
+                </div>
+                <div class="input-group">
+                    <label for="description">Descrição</label>
+                    <input type="text" id="description" />
+                </div>
+                <button type="submit" class="btn btn-primary">Adicionar Contato</button>
+                <button type="button" id="backup-btn" class="btn btn-secondary">Fazer Backup</button>
+            </form>
+        </div>
+
+        <!-- Updated filter bar for live search and sorting -->
+        <div class="filter-bar">
+            <input type="text" id="search" placeholder="Buscar Contatos" oninput="loadContacts()">
+            <select id="sort" onchange="loadContacts()">
+                <option value="asc">Crescente</option>
+                <option value="desc">Descendente</option>
+            </select>
+        </div>
+
+        <div id="contact-list" class="contacts-grid"></div>
+
+        <!-- Pagination controls -->
+        <div class="pagination">
+            <button id="prev-page" onclick="changePage(-1)">Previous</button>
+            <span class="page-info" id="page-info"></span>
+            <button id="next-page" onclick="changePage(1)">Next</button>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        let currentPage = 1;
+        const limit = 10;
+
+        // Show toast notifications
+        const showToast = (message, type = 'success') => {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            setTimeout(() => {
+                toast.className = 'toast';
+            }, 3000);
+        };
+
+        // Generate initials for avatars
+        const getInitials = (name) => {
+            return name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
+        };
+
+        // Format phone number for WhatsApp link
+        const formatPhoneForWhatsApp = (phone) => {
+            const cleanedPhone = phone.replace(/\D/g, ''); // Remove all non-numeric characters
+            return `https://wa.me/55${cleanedPhone}`;
+        };
+
+        // Load contacts with optional search and sort
+        const loadContacts = () => {
+            const search = document.getElementById('search').value || '';
+            const sort = document.getElementById('sort').value || 'asc';
+            const url = `/contacts?page=${currentPage}&limit=${limit}&sort=${sort}&search=${search}`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(result => {
+                    const { data, page, total } = result;
+                    const contactList = document.getElementById('contact-list');
+                    contactList.innerHTML = '';
+
+                    data.forEach(contact => {
+                        const contactElement = document.createElement('div');
+                        contactElement.classList.add('contact-card', 'animate__animated', 'animate__fadeIn');
+                        contactElement.innerHTML = `
+                            <div class="avatar">${getInitials(contact.name)}</div>
+                            <div class="contact-info">
+                                <p><strong>Nome:</strong> ${contact.name}</p>
+                                <p><strong>Telefone:</strong> <a href="${formatPhoneForWhatsApp(contact.phone_number)}" target="_blank">${contact.phone_number}</a></p>
+                                <p><strong>Cidade:</strong> ${contact.city || '-'}</p>
+                                <p><strong>Social:</strong> ${contact.social_media || '-'}</p>
+                                <p><strong>Descrição:</strong> ${contact.description || '-'}</p>
+                            </div>
+                        `;
+                        contactList.appendChild(contactElement);
+                    });
+
+                    // Update pagination info and controls
+                    const pageCount = Math.ceil(total / limit);
+                    document.getElementById('page-info').textContent = `Page ${page} of ${pageCount}`;
+                    document.getElementById('prev-page').disabled = page <= 1;
+                    document.getElementById('next-page').disabled = page >= pageCount;
+                })
+                .catch(error => showToast('Erro ao carregar contatos: ' + error.message, 'error'));
+        };
+
+        // Change page
+        const changePage = (direction) => {
+            currentPage += direction;
+            loadContacts();
+        };
+
+        // Trigger manual backup
+        const manualBackup = () => {
+            fetch('/backup', { method: 'POST' })
+                .then(response => response.text())
+                .then(message => showToast(message))
+                .catch(error => showToast('Erro ao fazer backup: ' + error.message, 'error'));
+        };
+
+        // Handle form submission for adding new contact
+        document.getElementById('contact-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const newContact = {
+                name: document.getElementById('name').value,
+                phone_number: document.getElementById('phone_number').value,
+                social_media: document.getElementById('social_media').value,
+                city: document.getElementById('city').value,
+                description: document.getElementById('description').value,
+            };
+
+            fetch('/contacts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newContact)
+            })
+                .then(() => {
+                    loadContacts();
+                    document.getElementById('contact-form').reset();
+                    showToast('Contato adicionado com sucesso!');
+                })
+                .catch(error => showToast('Erro ao adicionar contato: ' + error.message, 'error'));
+        });
+
+        // Backup button event
+        document.getElementById('backup-btn').addEventListener('click', manualBackup);
+
+        // Load initial contacts
+        loadContacts();
+    </script>
+
+</body>
+
+</html>
