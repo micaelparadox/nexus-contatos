@@ -70,6 +70,30 @@ app.post('/backup', (req, res) => {
     res.status(200).send('Backup created successfully');
 });
 
+// Rota para editar um contato existente
+app.put('/contacts/:id', (req, res) => {
+    const { id } = req.params;
+    const { phone_number, name, social_media, city, description } = req.body;
+    db.run(
+        `UPDATE contacts SET phone_number = ?, name = ?, social_media = ?, city = ?, description = ? WHERE id = ?`,
+        [phone_number, name, social_media, city, description, id],
+        function (err) {
+            if (err) return res.status(500).send(err.message);
+            res.status(200).send('Contact updated successfully');
+        }
+    );
+});
+
+// Rota para excluir um contato existente
+app.delete('/contacts/:id', (req, res) => {
+    const { id } = req.params;
+    db.run(`DELETE FROM contacts WHERE id = ?`, [id], function (err) {
+        if (err) return res.status(500).send(err.message);
+        res.status(200).send('Contact deleted successfully');
+    });
+});
+
+
 // Run backup every 24 hours
 setInterval(backupDatabase, 24 * 60 * 60 * 1000);
 

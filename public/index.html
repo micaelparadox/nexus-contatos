@@ -40,7 +40,6 @@
             </form>
         </div>
 
-        <!-- Updated filter bar for live search and sorting -->
         <div class="filter-bar">
             <input type="text" id="search" placeholder="Buscar Contatos" oninput="loadContacts()">
             <select id="sort" onchange="loadContacts()">
@@ -51,7 +50,6 @@
 
         <div id="contact-list" class="contacts-grid"></div>
 
-        <!-- Pagination controls -->
         <div class="pagination">
             <button id="prev-page" onclick="changePage(-1)">Previous</button>
             <span class="page-info" id="page-info"></span>
@@ -64,6 +62,7 @@
     <script>
         let currentPage = 1;
         const limit = 10;
+        let contactsData = []; // Global variable to store contacts data
 
         // Show toast notifications
         const showToast = (message, type = 'success') => {
@@ -75,18 +74,15 @@
             }, 3000);
         };
 
-        // Generate initials for avatars
         const getInitials = (name) => {
             return name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
         };
 
-        // Format phone number for WhatsApp link
         const formatPhoneForWhatsApp = (phone) => {
-            const cleanedPhone = phone.replace(/\D/g, ''); // Remove all non-numeric characters
+            const cleanedPhone = phone.replace(/\D/g, '');
             return `https://wa.me/55${cleanedPhone}`;
         };
 
-        // Load contacts with optional search and sort
         const loadContacts = () => {
             const search = document.getElementById('search').value || '';
             const sort = document.getElementById('sort').value || 'asc';
@@ -96,6 +92,7 @@
                 .then(response => response.json())
                 .then(result => {
                     const { data, page, total } = result;
+                    contactsData = data; // Store the loaded contacts
                     const contactList = document.getElementById('contact-list');
                     contactList.innerHTML = '';
 
@@ -111,11 +108,14 @@
                                 <p><strong>Social:</strong> ${contact.social_media || '-'}</p>
                                 <p><strong>Descrição:</strong> ${contact.description || '-'}</p>
                             </div>
+                            <div class="contact-actions">
+                                <button class="btn btn-edit" onclick="editContact(${contact.id})">Editar</button>
+                                <button class="btn btn-delete" onclick="deleteContact(${contact.id})">Excluir</button>
+                            </div>
                         `;
                         contactList.appendChild(contactElement);
                     });
 
-                    // Update pagination info and controls
                     const pageCount = Math.ceil(total / limit);
                     document.getElementById('page-info').textContent = `Page ${page} of ${pageCount}`;
                     document.getElementById('prev-page').disabled = page <= 1;
@@ -124,13 +124,11 @@
                 .catch(error => showToast('Erro ao carregar contatos: ' + error.message, 'error'));
         };
 
-        // Change page
         const changePage = (direction) => {
             currentPage += direction;
             loadContacts();
         };
 
-        // Trigger manual backup
         const manualBackup = () => {
             fetch('/backup', { method: 'POST' })
                 .then(response => response.text())
@@ -138,7 +136,6 @@
                 .catch(error => showToast('Erro ao fazer backup: ' + error.message, 'error'));
         };
 
-        // Handle form submission for adding new contact
         document.getElementById('contact-form').addEventListener('submit', (e) => {
             e.preventDefault();
             const newContact = {
@@ -162,10 +159,82 @@
                 .catch(error => showToast('Erro ao adicionar contato: ' + error.message, 'error'));
         });
 
-        // Backup button event
+        const editContact = (id) => {
+            const contact = contactsData.find(c => c.id === id);
+            if (contact) {
+                document.getElementById('name').value = contact.name;
+                document.getElementById('phone_number').value = contact.phone_number;
+                document.getElementById('social_media').value = contact.social_media;
+                document.getElementById('city').value = contact.city;
+                document.getElementById('description').value = contact.description;
+
+                document.getElementById('contact-form').onsubmit = (e) => {
+                    e.preventDefault();
+                    updateContact(id);
+                };
+            }
+        };
+
+        const updateContact = (id) => {
+            const updatedContact = {
+                name: document.getElementById('name').value,
+                phone_number: document.getElementById('phone_number').value,
+                social_media: document.getElementById('social_media').value,
+                city: document.getElementById('city').value,
+                description: document.getElementById('description').value,
+            };
+
+            fetch(`/contacts/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedContact)
+            })
+                .then(() => {
+                    loadContacts();
+                    document.getElementById('contact-form').reset();
+                    showToast('Contato atualizado com sucesso!');
+                    document.getElementById('contact-form').onsubmit = addContact;
+                })
+                .catch(error => showToast('Erro ao atualizar contato: ' + error.message, 'error'));
+        };
+
+        const deleteContact = (id) => {
+            if (confirm('Tem certeza que deseja excluir este contato?')) {
+                fetch(`/contacts/${id}`, { method: 'DELETE' })
+                    .then(() => {
+                        loadContacts();
+                        showToast('Contato excluído com sucesso!');
+                    })
+                    .catch(error => showToast('Erro ao excluir contato: ' + error.message, 'error'));
+            }
+        };
+
         document.getElementById('backup-btn').addEventListener('click', manualBackup);
 
-        // Load initial contacts
+        const addContact = (e) => {
+            e.preventDefault();
+            const newContact = {
+                name: document.getElementById('name').value,
+                phone_number: document.getElementById('phone_number').value,
+                social_media: document.getElementById('social_media').value,
+                city: document.getElementById('city').value,
+                description: document.getElementById('description').value,
+            };
+
+            fetch('/contacts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newContact)
+            })
+                .then(() => {
+                    loadContacts();
+                    document.getElementById('contact-form').reset();
+                    showToast('Contato adicionado com sucesso!');
+                })
+                .catch(error => showToast('Erro ao adicionar contato: ' + error.message, 'error'));
+        };
+
+        document.getElementById('contact-form').onsubmit = addContact;
         loadContacts();
     </script>
 
