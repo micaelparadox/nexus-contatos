@@ -6,11 +6,11 @@ const db = new sqlite3.Database('./db/contacts.db', (err) => {
     console.log('Connected to the SQLite database.');
 });
 
-// Create the contacts table if it doesn't exist
+// Create the contacts table with a unique constraint on phone_number if it doesn't exist
 db.run(`
     CREATE TABLE IF NOT EXISTS contacts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        phone_number TEXT NOT NULL,
+        phone_number TEXT NOT NULL UNIQUE,
         name TEXT NOT NULL,
         social_media TEXT,
         city TEXT,

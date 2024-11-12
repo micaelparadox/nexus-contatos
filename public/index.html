@@ -15,6 +15,7 @@
         <div class="sidebar">
             <h1>Nexus Contact Hub</h1>
             <form id="contact-form">
+                <input type="hidden" id="contact-id">
                 <div class="input-group">
                     <label for="name">Nome</label>
                     <input type="text" id="name" required />
@@ -35,7 +36,7 @@
                     <label for="description">Descrição</label>
                     <input type="text" id="description" />
                 </div>
-                <button type="submit" class="btn btn-primary">Adicionar Contato</button>
+                <button type="submit" id="submit-btn" class="btn btn-primary">Adicionar Contato</button>
                 <button type="button" id="backup-btn" class="btn btn-secondary">Fazer Backup</button>
             </form>
         </div>
@@ -62,9 +63,9 @@
     <script>
         let currentPage = 1;
         const limit = 10;
-        let contactsData = []; // Global variable to store contacts data
+        let contactsData = [];
+        let isEditing = false;
 
-        // Show toast notifications
         const showToast = (message, type = 'success') => {
             const toast = document.getElementById('toast');
             toast.textContent = message;
@@ -83,6 +84,13 @@
             return `https://wa.me/55${cleanedPhone}`;
         };
 
+        const resetForm = () => {
+            document.getElementById('contact-form').reset();
+            document.getElementById('contact-id').value = '';
+            document.getElementById('submit-btn').textContent = 'Adicionar Contato';
+            isEditing = false;
+        };
+
         const loadContacts = () => {
             const search = document.getElementById('search').value || '';
             const sort = document.getElementById('sort').value || 'asc';
@@ -92,7 +100,7 @@
                 .then(response => response.json())
                 .then(result => {
                     const { data, page, total } = result;
-                    contactsData = data; // Store the loaded contacts
+                    contactsData = data;
                     const contactList = document.getElementById('contact-list');
                     contactList.innerHTML = '';
 
@@ -129,6 +137,66 @@
             loadContacts();
         };
 
+        const handleSubmit = async (e) => {
+            e.preventDefault();
+            const contactId = document.getElementById('contact-id').value;
+            const contactData = {
+                name: document.getElementById('name').value,
+                phone_number: document.getElementById('phone_number').value,
+                social_media: document.getElementById('social_media').value,
+                city: document.getElementById('city').value,
+                description: document.getElementById('description').value,
+            };
+
+            try {
+                const url = contactId ? `/contacts/${contactId}` : '/contacts';
+                const method = contactId ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(contactData)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.text();
+                    throw new Error(errorData);
+                }
+
+                showToast(`Contato ${contactId ? 'atualizado' : 'adicionado'} com sucesso!`);
+                resetForm();
+                loadContacts();
+            } catch (error) {
+                showToast(error.message, 'error');
+            }
+        };
+
+        const editContact = (id) => {
+            const contact = contactsData.find(c => c.id === id);
+            if (contact) {
+                document.getElementById('contact-id').value = contact.id;
+                document.getElementById('name').value = contact.name;
+                document.getElementById('phone_number').value = contact.phone_number;
+                document.getElementById('social_media').value = contact.social_media;
+                document.getElementById('city').value = contact.city;
+                document.getElementById('description').value = contact.description;
+                document.getElementById('submit-btn').textContent = 'Atualizar Contato';
+                isEditing = true;
+            }
+        };
+
+        const deleteContact = (id) => {
+            if (confirm('Tem certeza que deseja excluir este contato?')) {
+                fetch(`/contacts/${id}`, { method: 'DELETE' })
+                    .then(response => {
+                        if (!response.ok) throw new Error('Erro ao excluir contato');
+                        loadContacts();
+                        showToast('Contato excluído com sucesso!');
+                    })
+                    .catch(error => showToast(error.message, 'error'));
+            }
+        };
+
         const manualBackup = () => {
             fetch('/backup', { method: 'POST' })
                 .then(response => response.text())
@@ -136,108 +204,11 @@
                 .catch(error => showToast('Erro ao fazer backup: ' + error.message, 'error'));
         };
 
-        document.getElementById('contact-form').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const newContact = {
-                name: document.getElementById('name').value,
-                phone_number: document.getElementById('phone_number').value,
-                social_media: document.getElementById('social_media').value,
-                city: document.getElementById('city').value,
-                description: document.getElementById('description').value,
-            };
-
-            fetch('/contacts', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newContact)
-            })
-                .then(() => {
-                    loadContacts();
-                    document.getElementById('contact-form').reset();
-                    showToast('Contato adicionado com sucesso!');
-                })
-                .catch(error => showToast('Erro ao adicionar contato: ' + error.message, 'error'));
-        });
-
-        const editContact = (id) => {
-            const contact = contactsData.find(c => c.id === id);
-            if (contact) {
-                document.getElementById('name').value = contact.name;
-                document.getElementById('phone_number').value = contact.phone_number;
-                document.getElementById('social_media').value = contact.social_media;
-                document.getElementById('city').value = contact.city;
-                document.getElementById('description').value = contact.description;
-
-                document.getElementById('contact-form').onsubmit = (e) => {
-                    e.preventDefault();
-                    updateContact(id);
-                };
-            }
-        };
-
-        const updateContact = (id) => {
-            const updatedContact = {
-                name: document.getElementById('name').value,
-                phone_number: document.getElementById('phone_number').value,
-                social_media: document.getElementById('social_media').value,
-                city: document.getElementById('city').value,
-                description: document.getElementById('description').value,
-            };
-
-            fetch(`/contacts/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updatedContact)
-            })
-                .then(() => {
-                    loadContacts();
-                    document.getElementById('contact-form').reset();
-                    showToast('Contato atualizado com sucesso!');
-                    document.getElementById('contact-form').onsubmit = addContact;
-                })
-                .catch(error => showToast('Erro ao atualizar contato: ' + error.message, 'error'));
-        };
-
-        const deleteContact = (id) => {
-            if (confirm('Tem certeza que deseja excluir este contato?')) {
-                fetch(`/contacts/${id}`, { method: 'DELETE' })
-                    .then(() => {
-                        loadContacts();
-                        showToast('Contato excluído com sucesso!');
-                    })
-                    .catch(error => showToast('Erro ao excluir contato: ' + error.message, 'error'));
-            }
-        };
-
+        document.getElementById('contact-form').addEventListener('submit', handleSubmit);
         document.getElementById('backup-btn').addEventListener('click', manualBackup);
 
-        const addContact = (e) => {
-            e.preventDefault();
-            const newContact = {
-                name: document.getElementById('name').value,
-                phone_number: document.getElementById('phone_number').value,
-                social_media: document.getElementById('social_media').value,
-                city: document.getElementById('city').value,
-                description: document.getElementById('description').value,
-            };
-
-            fetch('/contacts', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newContact)
-            })
-                .then(() => {
-                    loadContacts();
-                    document.getElementById('contact-form').reset();
-                    showToast('Contato adicionado com sucesso!');
-                })
-                .catch(error => showToast('Erro ao adicionar contato: ' + error.message, 'error'));
-        };
-
-        document.getElementById('contact-form').onsubmit = addContact;
         loadContacts();
     </script>
-
 </body>
 
 </html>
