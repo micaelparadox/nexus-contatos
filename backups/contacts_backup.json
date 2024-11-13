@@ -54,5 +54,21 @@
     "social_media": "",
     "city": "ascurra",
     "description": "cidade proxima de blumenau"
+  },
+  {
+    "id": 15,
+    "phone_number": "48999500929",
+    "name": "Claudia Bittencourt",
+    "social_media": "",
+    "city": "",
+    "description": ""
+  },
+  {
+    "id": 16,
+    "phone_number": "47 9282-6921",
+    "name": "Emelin Paulinha",
+    "social_media": "",
+    "city": "Indaial",
+    "description": ""
   }
 ]
