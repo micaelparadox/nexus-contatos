@@ -29,6 +29,22 @@
     "name": "ana paula ",
     "social_media": "",
     "city": "joinvile",
-    "description": "nao sei "
+    "description": "servidor publico"
+  },
+  {
+    "id": 12,
+    "phone_number": "47999101108",
+    "name": "Joice Bernardi",
+    "social_media": "",
+    "city": "BLUMENAU",
+    "description": "biomedicina"
+  },
+  {
+    "id": 13,
+    "phone_number": "47997184049",
+    "name": "Luciana Goes",
+    "social_media": "",
+    "city": "BLUMENAU",
+    "description": ""
   }
 ]
