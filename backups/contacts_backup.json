@@ -18,7 +18,7 @@
   {
     "id": 3,
     "phone_number": "47 991620045",
-    "name": "Lilian Elaine",
+    "name": "Lilian Elaine Piske",
     "social_media": "",
     "city": "BLUMENAU",
     "description": "cordenadora"
@@ -46,5 +46,13 @@
     "social_media": "",
     "city": "BLUMENAU",
     "description": ""
+  },
+  {
+    "id": 14,
+    "phone_number": "47991768568",
+    "name": "Jessica",
+    "social_media": "",
+    "city": "ascurra",
+    "description": "cidade proxima de blumenau"
   }
 ]
